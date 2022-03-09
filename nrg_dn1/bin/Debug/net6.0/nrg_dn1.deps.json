@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v6.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v6.0": {
+      "nrg_dn1/1.0.0": {
+        "runtime": {
+          "nrg_dn1.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "nrg_dn1/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
