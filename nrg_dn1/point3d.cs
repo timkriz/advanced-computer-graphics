@@ -3,15 +3,17 @@ using System;
 public class Point3D
 {
     protected double x, y, z;
+    protected double value;
 
 
     public Point3D()
     {
     }
 
-    public Point3D(double nx, double ny, double nz)
+    public Point3D(double nx, double ny, double nz, double nValue = 0.0 )
     {
-        MoveTo(nx, ny, nz);
+        SetCoordinates(nx, ny, nz);
+        SetValue(nValue);
     }
 
     public double GetX()
@@ -44,7 +46,16 @@ public class Point3D
         z = value;
     }
 
-    public void MoveTo(double nx, double ny, double nz)
+    public double GetValue()
+    {
+        return value;
+    }
+    public void SetValue(double nValue)
+    {
+        value = nValue;
+    }
+
+    public void SetCoordinates(double nx, double ny, double nz)
     {
         x = nx;
         y = ny;

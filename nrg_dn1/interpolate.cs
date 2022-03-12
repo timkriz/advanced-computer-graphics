@@ -1,14 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 class Interpolate
+{   
+    public enum Method
 {
+    basic,
+    modified,
+}
     static void Main(string[] args)
     {   
+        string outputFileName = @"\output.raw";
+
+        Method method = Method.basic;
         List<Point3D> inputPoints = new List<Point3D>();
-        List<double> inputValues = new List<double>();
         List<byte> outputValues = new List<byte>();
 
         int p = 3;
+        double r = 0.5;
         float minX = -1.5f;
         float minY = -1.5f;
         float minZ = -1.0f;
@@ -32,18 +40,36 @@ class Interpolate
             if (x > maxX || x < minX || y > maxY || y < minY || z > maxZ || z < minZ) {
                 // Remove outliers
             } else {
-                Point3D point = new Point3D (x, y, z);
+                Point3D point = new Point3D (x, y, z, value);
                 inputPoints.Add(point);
-                inputValues.Add(value);
             }
         }
-        // Determine max value of points (for maping to uint8 range later)
-        double maxValue = findMaxValue(inputValues);
+        // Determine max value of points
+        double maxValue = findMaxValue(inputPoints);
 
         // TODO: Parse arguments
         //Console.WriteLine("Argument length: " + args.Length);
         for (int i = 0; i < args.Length; i++) {
-            //Console.WriteLine(args[i]);
+            if(String.Equals(args[i], "--r")) { r = Convert.ToDouble(args[i+1]);};
+            if(String.Equals(args[i], "--p")) { p = Int32.Parse(args[i+1]);};
+            if(String.Equals(args[i], "--min-x")) { minX = float.Parse(args[i+1]);};
+            if(String.Equals(args[i], "--min-y")) { minY = float.Parse(args[i+1]);};
+            if(String.Equals(args[i], "--min-z")) { minZ = float.Parse(args[i+1]);};
+            if(String.Equals(args[i], "--max-x")) { maxX = float.Parse(args[i+1]);};
+            if(String.Equals(args[i], "--max-y")) { maxY = float.Parse(args[i+1]);};
+            if(String.Equals(args[i], "--max-z")) { maxZ = float.Parse(args[i+1]);};
+            if(String.Equals(args[i], "--res-x")) { resX = Int32.Parse(args[i+1]);};
+            if(String.Equals(args[i], "--res-y")) { resY = Int32.Parse(args[i+1]);};
+            if(String.Equals(args[i], "--res-z")) { resZ = Int32.Parse(args[i+1]);};
+            if(String.Equals(args[i], "--method")) 
+            { 
+                if (String.Equals(args[i+1], "modified")) 
+                {
+                    method = Method.modified;
+                } else {
+                    method = Method.basic;
+                }
+            }
         }
 
         // Ouput
@@ -63,7 +89,7 @@ class Interpolate
                     double stevec = 0;
                     double imenovalec = 0;
                     for (int k = 0; k < inputPoints.Count; k++) {
-                        double pointValue = inputValues[k];
+                        double pointValue = inputPoints[k].GetValue();
                         double distance = interpolatedPoint.DistanceTo(inputPoints[k]);
                         double wk = (float)(1 / Math.Pow(distance, p));
                         stevec += wk * pointValue;
@@ -75,60 +101,45 @@ class Interpolate
                         }
 
                     }
-                    
-                    //byte value = (byte) 255;
                     double thisValue = stevec/imenovalec;
-                    //outputValues.Add(thisValue);
-                    //Console.WriteLine(xp + " " + yp + " " + " " + zp + " " + "     " + thisValue); 
+                    interpolatedPoint.SetValue(thisValue);
 
-                    byte roundedValue = (byte)Convert.ToByte((255/maxValue) * thisValue); // Map from range 0-maxValue ro range 0-255
+                    byte roundedValue = (byte)Convert.ToByte(mapRange(0, maxValue, 0, 255, thisValue)); // Map from range 0-maxValue to range 0-255
                     outputValues.Add(roundedValue);
-                    //byte valueToByte =  Convert.ToByte(thisValue);
-                    //Console.WriteLine(roundedValue);
-                    //byteArray[x+y+z] = valueToByte;
-                    
-                    
-                    //Console.WriteLine(stevec + " " + imenovalec + " "  + thisValue + " " + Math.Round(mapRange(0, findMaxValue(inputValues), 0, 255, thisValue)));
-
-                    //Console.WriteLine(Convert.ToString((int)Math.Round(mapRange(0, findMaxValue(inputValues), 0, 255, thisValue)), 2));
                 }
             }
         }
-        ByteArrayToFile(Environment.CurrentDirectory + @"\output2.raw", outputValues);
+        ByteArrayToFile(Environment.CurrentDirectory + outputFileName, outputValues);
     }
-    public static float mapRange(float a1,float a2,float b1,float b2,float s)
+    public static double mapRange(double a1,double a2,double b1,double b2,double s)
         {
 	        return b1 + (s-a1)*(b2-b1)/(a2-a1);
         }
-    public static double findMaxValue(List<double> list)
+    public static double findMaxValue(List<Point3D> list)
     {
         if (list.Count == 0)
         {
             throw new InvalidOperationException("Empty list");
         }
-        double maxAge = double.MinValue;
-        foreach (double type in list)
+        double maxValue = double.MinValue;
+        foreach (Point3D point in list)
         {
-            if (type > maxAge)
+            if (point.GetValue() > maxValue)
             {
-                maxAge = type;
+                maxValue = point.GetValue();
             }
         }
-        return maxAge;
+        return maxValue;
     }
-    public static bool ByteArrayToFile(string fileName, List<byte> doubleArray)
+    public static bool ByteArrayToFile(string fileName, List<byte> byteList)
     {
         try
         {   
             using (var fs = new System.IO.FileStream(fileName, System.IO.FileMode.Create, System.IO.FileAccess.Write))
             using (System.IO.BinaryWriter writer = new System.IO.BinaryWriter(fs, System.Text.Encoding.UTF8))
             {
-                byte[] myArryByte = doubleArray.ToArray();
-                writer.Write(myArryByte);
-                /*foreach (var b in doubleArray)
-                {
-                    writer.Write(b);
-                }*/
+                byte[] byteArray = byteList.ToArray();
+                writer.Write(byteArray);
                 writer.Close();
                 return true;
             }
@@ -138,10 +149,5 @@ class Interpolate
             Console.WriteLine("Exception caught in process: {0}", ex);
             return false;
         }
-    }
-
-    static public string ToReadableByteArray(byte[] bytes)
-    {
-        return string.Join(", ", bytes);
     }
 }
