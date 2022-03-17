@@ -2,18 +2,17 @@
 using System;
 public class Point3D
 {
-    protected double x, y, z;
-    protected double value;
+    public double x, y, z;
+    public double value;
 
 
     public Point3D()
     {
     }
 
-    public Point3D(double nx, double ny, double nz, double nValue = 0.0 )
+    public Point3D(double nx, double ny, double nz)
     {
         SetCoordinates(nx, ny, nz);
-        SetValue(nValue);
     }
 
     public double GetX()

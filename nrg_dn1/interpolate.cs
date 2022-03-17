@@ -9,13 +9,13 @@ class Interpolate
 }
     static void Main(string[] args)
     {   
-        string outputFileName = @"\output.raw";
+        string outputFileName = @"\output1k_basic.raw";
 
         Method method = Method.basic;
         List<Point3D> inputPoints = new List<Point3D>();
         List<byte> outputValues = new List<byte>();
 
-        int p = 3;
+        int p = 2;
         double r = 0.5;
         float minX = -1.5f;
         float minY = -1.5f;
@@ -40,15 +40,14 @@ class Interpolate
             if (x > maxX || x < minX || y > maxY || y < minY || z > maxZ || z < minZ) {
                 // Remove outliers
             } else {
-                Point3D point = new Point3D (x, y, z, value);
+                Point3D point = new Point3D (x, y, z);
+                point.SetValue(value);
                 inputPoints.Add(point);
             }
         }
         // Determine max value of points
         double maxValue = findMaxValue(inputPoints);
 
-        // TODO: Parse arguments
-        //Console.WriteLine("Argument length: " + args.Length);
         for (int i = 0; i < args.Length; i++) {
             if(String.Equals(args[i], "--r")) { r = Convert.ToDouble(args[i+1]);};
             if(String.Equals(args[i], "--p")) { p = Int32.Parse(args[i+1]);};
@@ -77,38 +76,100 @@ class Interpolate
         double stepY = Math.Abs(maxY-minY)/(resY-1);
         double stepZ = Math.Abs(maxZ-minZ)/(resZ-1);
 
-        for (int z = 0; z < resZ; z++) {
-            for (int y = 0; y < resY; y++) {
-                for (int x = 0; x < resX; x++) {
-                    double xp = minX + x*stepX;
-                    double yp = minY + y*stepY;
-                    double zp = minZ + z*stepZ;
+        if (method == Method.basic) 
+        {
+            for (int z = 0; z < resZ; z++) {
+                for (int y = 0; y < resY; y++) {
+                    for (int x = 0; x < resX; x++) {
+                        double xp = minX + x*stepX;
+                        double yp = minY + y*stepY;
+                        double zp = minZ + z*stepZ;
 
-                    Point3D interpolatedPoint = new Point3D (xp, yp, zp); // Point in volume
+                        Point3D interpolatedPoint = new Point3D (xp, yp, zp); // Point in volume
 
-                    double stevec = 0;
-                    double imenovalec = 0;
-                    for (int k = 0; k < inputPoints.Count; k++) {
-                        double pointValue = inputPoints[k].GetValue();
-                        double distance = interpolatedPoint.DistanceTo(inputPoints[k]);
-                        double wk = (float)(1 / Math.Pow(distance, p));
-                        stevec += wk * pointValue;
-                        imenovalec += wk;
-                        if (distance == 0) {
-                            stevec = pointValue;
-                            imenovalec = 1;
-                            break;
+                        double stevec = 0;
+                        double imenovalec = 0;
+                        for (int k = 0; k < inputPoints.Count; k++) {
+                            double pointValue = inputPoints[k].GetValue();
+                            double distance = interpolatedPoint.DistanceTo(inputPoints[k]);
+                            double wk = (double)(1 / Math.Pow(distance, p));
+                            stevec += wk * pointValue;
+                            imenovalec += wk;
+                            if (distance == 0) {
+                                stevec = pointValue;
+                                imenovalec = 1;
+                                break;
+                            }
+
+                        }
+                        double thisValue = stevec/imenovalec;
+                        interpolatedPoint.SetValue(thisValue);
+
+                        byte roundedValue = (byte)Convert.ToByte(mapRange(0, maxValue, 0, 255, thisValue)); // Map from range 0-maxValue to range 0-255
+                        outputValues.Add(roundedValue);
+                    }
+                }
+            }
+        } else 
+        {
+            Octree<Point3D> octree = new Octree<Point3D>(new Point3D(0.0, 0.0, 0.0), 3, 4);
+            for (int j = 0; j< inputPoints.Count; j++) {
+                octree.insertPoint(inputPoints[j]);
+            }
+
+            Console.WriteLine("input length input : " + inputPoints.Count);
+
+            for (int z = 0; z < resZ; z++) {
+                for (int y = 0; y < resY; y++) {
+                    for (int x = 0; x < resX; x++) {
+                        double xp = minX + x*stepX;
+                        double yp = minY + y*stepY;
+                        double zp = minZ + z*stepZ;
+
+                        Point3D interpolatedPoint = new Point3D (xp, yp, zp); // Point in volume
+                        List<Point3D> result = octree.query(interpolatedPoint, r);
+                        /*for (int j = 0; j< result.Count; j++) {
+                            Console.WriteLine(result[j].x);
+                        }*/
+                        //Console.WriteLine("length octree : " + result.Count);
+
+                        double stevec = 0;
+                        double imenovalec = 0;
+
+                        if (result.Count == 0) {
+                            Console.WriteLine("length octree : " + result.Count);
+                            while (result.Count<1) {
+                                r= r+0.1;
+                                Console.WriteLine(r);
+                                result = octree.query(interpolatedPoint, r);
+                            }
+                            Console.WriteLine("new bigger length octree : " + result.Count);
                         }
 
-                    }
-                    double thisValue = stevec/imenovalec;
-                    interpolatedPoint.SetValue(thisValue);
+                        // For points that are nearest neighbour in radius R!
+                        for (int k = 0; k < result.Count; k++) {
+                            double pointValue = result[k].GetValue();
+                            double distance = interpolatedPoint.DistanceTo(result[k]);
 
-                    byte roundedValue = (byte)Convert.ToByte(mapRange(0, maxValue, 0, 255, thisValue)); // Map from range 0-maxValue to range 0-255
-                    outputValues.Add(roundedValue);
+                            double wk = (double)Math.Pow(((Math.Max(0, r-distance)) / r*distance), 2.0);      // THIS CHANGES! 
+                            stevec += wk * pointValue;
+                            imenovalec += wk;
+                            if (distance == 0) {
+                                stevec = pointValue;
+                                imenovalec = 1;
+                                break;
+                            }
+                        }
+                        
+                        double thisValue = stevec/imenovalec;
+                        interpolatedPoint.SetValue(thisValue);
+                        byte roundedValue = (byte)Convert.ToByte(mapRange(0, maxValue, 0, 255, thisValue)); // Map from range 0-maxValue to range 0-255
+                        outputValues.Add(roundedValue);
+                    }
                 }
             }
         }
+
         ByteArrayToFile(Environment.CurrentDirectory + outputFileName, outputValues);
     }
     public static double mapRange(double a1,double a2,double b1,double b2,double s)
@@ -136,7 +197,7 @@ class Interpolate
         try
         {   
             using (var fs = new System.IO.FileStream(fileName, System.IO.FileMode.Create, System.IO.FileAccess.Write))
-            using (System.IO.BinaryWriter writer = new System.IO.BinaryWriter(fs, System.Text.Encoding.UTF8))
+            using (System.IO.BinaryWriter writer = new System.IO.BinaryWriter(fs))
             {
                 byte[] byteArray = byteList.ToArray();
                 writer.Write(byteArray);
