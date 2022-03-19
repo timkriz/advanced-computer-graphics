@@ -13,12 +13,14 @@ class Interpolate
     static int resX, resY, resZ;
     static int p; // Controls the shape of the interpolant.
     static double r; // Radius of influence in modified method
+    static int octreeBucketSize;
     
     static void Main(string[] args)
     {   
         string outputFileName = @"\output.raw";
 
         method = Method.basic;
+        octreeBucketSize = 4;
         p = 2; 
         r = 0.5;
         minX = -1.5f;
@@ -36,24 +38,32 @@ class Interpolate
         List<Point3D> inputPoints = readInputFile(); // Read input
         parseInputArguments(args);
 
-        List<byte> outputValues = shepardsInterpolation(inputPoints, method); // Interpolate
+        List<float> outputValues = shepardsInterpolation(inputPoints, method); // Interpolate
 
-        byteArrayToFile(Environment.CurrentDirectory + outputFileName, outputValues); // Write to file
+        // 1. OUTPUT: Float represenatation
+        floatListToFile(Environment.CurrentDirectory + outputFileName, outputValues); // Write to binary file
+
+        // 2. OUTPUT: Byte represenatation for visualization
+        float maxValue = findMaxValue(outputValues);
+        List<byte> mappedOutputValues = new List<byte>();
+        for (int i = 0; i < outputValues.Count; i++) {
+            mappedOutputValues.Add((byte)Convert.ToByte(mapRange(0, maxValue, 0, 255, outputValues[i]))); // Map range from float to byte
+        }
+        //byteListToFile(Environment.CurrentDirectory + outputFileName, mappedOutputValues); // Write to binary file
     }
 
-    public static List<Byte> shepardsInterpolation(List<Point3D> points, Method method)
+    public static List<float> shepardsInterpolation(List<Point3D> points, Method method)
     {
         
         double stepX = Math.Abs(maxX-minX)/(resX-1);
         double stepY = Math.Abs(maxY-minY)/(resY-1);
         double stepZ = Math.Abs(maxZ-minZ)/(resZ-1);
 
-        double maxValue = findMaxValue(points); // Determine max value of points for range calculation
-        List<byte> outputValues = new List<byte>();
+        List<float> outputValues = new List<float>();
         Octree<Point3D> octree = null;
 
         if (method == Method.modified) {
-            octree = constructOctree(points);
+            octree = constructOctree(points, new Point3D(0.0, 0.0, 0.0), Math.Abs(maxX-minX), octreeBucketSize);
         }
 
         for (int z = 0; z < resZ; z++) {
@@ -65,11 +75,9 @@ class Interpolate
 
                     Point3D interpolatedPoint = new Point3D (xp, yp, zp); // Point in volume
                     
-                    double interpolatedPointValue = method == Method.basic ? getBasicInterpolatedPointValue(interpolatedPoint, points) : getModifiedInterpolatedPointValue(interpolatedPoint, points, octree);
+                    float interpolatedPointValue = method == Method.basic ? (float)getBasicInterpolatedPointValue(interpolatedPoint, points) : (float)getModifiedInterpolatedPointValue(interpolatedPoint, points, octree);
                     interpolatedPoint.SetValue(interpolatedPointValue);
-
-                    byte roundedValue = (byte)Convert.ToByte(mapRange(0, maxValue, 0, 255, interpolatedPointValue)); // Map from range 0-maxValue to range 0-255
-                    outputValues.Add(roundedValue);
+                    outputValues.Add(interpolatedPointValue);
                 }
             }
         }
@@ -99,11 +107,12 @@ class Interpolate
     {
         List<Point3D> radiusNeighbours = octree.query(interpolatedPoint, r);
         if (radiusNeighbours.Count == 0) {
+            double bigger_r = r; // No neighbours in this radius. Find nearest point.
             while (radiusNeighbours.Count<1) {
-                r= r+0.1;
-                Console.WriteLine("Not found in radius, making it bigger to " + r);
-                radiusNeighbours = octree.query(interpolatedPoint, r);
+                bigger_r= bigger_r + bigger_r/4;
+                radiusNeighbours = octree.query(interpolatedPoint, bigger_r);
             }
+            return radiusNeighbours[0].GetValue();
         }
 
         double numerator = 0;
@@ -124,9 +133,9 @@ class Interpolate
         return numerator/denominator;
     }
 
-    public static Octree<Point3D> constructOctree(List<Point3D> inputPoints)
+    public static Octree<Point3D> constructOctree(List<Point3D> inputPoints, Point3D position, double size, int bucketSize)
     {
-        Octree<Point3D> octree = new Octree<Point3D>(new Point3D(0.0, 0.0, 0.0), 3, 4);
+        Octree<Point3D> octree = new Octree<Point3D>(position, size, bucketSize);
         for (int j = 0; j< inputPoints.Count; j++) {
             octree.insertPoint(inputPoints[j]);
         }
@@ -191,24 +200,24 @@ class Interpolate
         return b1 + (s-a1)*(b2-b1)/(a2-a1);
     }
 
-    public static double findMaxValue(List<Point3D> list)
+    public static float findMaxValue(List<float> list)
     {
         if (list.Count == 0)
         {
             throw new InvalidOperationException("Empty list");
         }
-        double maxValue = double.MinValue;
-        foreach (Point3D point in list)
+        float maxValue = float.MinValue;
+        foreach (float value in list)
         {
-            if (point.GetValue() > maxValue)
+            if (value > maxValue)
             {
-                maxValue = point.GetValue();
+                maxValue = value;
             }
         }
         return maxValue;
     }
 
-    public static bool byteArrayToFile(string fileName, List<byte> byteList)
+    public static bool byteListToFile(string fileName, List<byte> byteList)
     {
         try
         {   
@@ -217,6 +226,28 @@ class Interpolate
             {
                 byte[] byteArray = byteList.ToArray();
                 writer.Write(byteArray);
+                writer.Close();
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Exception caught in process: {0}", ex);
+            return false;
+        }
+    }
+    public static bool floatListToFile(string fileName, List<float> floatList)
+    {
+        try
+        {   
+            using (var fs = new System.IO.FileStream(fileName, System.IO.FileMode.Create, System.IO.FileAccess.Write))
+            using (System.IO.BinaryWriter writer = new System.IO.BinaryWriter(fs))
+            {
+                float[] floatArray = floatList.ToArray();
+                foreach (float value in floatArray)
+                {
+                    writer.Write(value);
+                }
                 writer.Close();
                 return true;
             }
