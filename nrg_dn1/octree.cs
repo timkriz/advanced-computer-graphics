@@ -12,7 +12,7 @@ public class Octree<TType>
     {
         this.rootNode = new OctreeNode<TType>(position, size, bucketSize);
     }
-    public List<Point3D> query(Point3D point, double radius) {
+    public List<Point3D> queryNeighbours(Point3D point, double radius) {
         return rootNode.queryNeighbours(new Cube(point, radius), new List<Point3D>());
     }
     public void insertPoint(Point3D point) {
@@ -119,8 +119,7 @@ public class Octree<TType>
         {
             return (point.x >= position.x - size/2 && point.x <= position.x + size/2 &&
                     point.y >= position.y - size/2 && point.y <= position.y + size/2 && 
-                    point.z >= position.z - size/2 && point.z <= position.z + size/2
-            );
+                    point.z >= position.z - size/2 && point.z <= position.z + size/2 );
         }
 
         public bool intersects(Cube range)

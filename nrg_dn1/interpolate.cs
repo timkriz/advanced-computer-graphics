@@ -11,8 +11,8 @@ class Interpolate
     static Method method;
     static float minX, minY, minZ, maxX, maxY, maxZ;
     static int resX, resY, resZ;
-    static int p; // Controls the shape of the interpolant.
-    static double r; // Radius of influence in modified method
+    static int p;                                           // Controls the shape of the interpolant.
+    static double r;                                        // Radius of influence in modified method
     static int octreeBucketSize;
     
     static void Main(string[] args)
@@ -38,10 +38,10 @@ class Interpolate
         List<Point3D> inputPoints = readInputFile(); // Read input
         parseInputArguments(args);
 
-        List<float> outputValues = shepardsInterpolation(inputPoints, method); // Interpolate
+        List<float> outputValues = shepardsInterpolation(inputPoints, method);          // Interpolated values
 
         // 1. OUTPUT: Float represenatation
-        floatListToFile(Environment.CurrentDirectory + outputFileName, outputValues); // Write to binary file
+        floatListToFile(Environment.CurrentDirectory + outputFileName, outputValues);   // Write to binary file
 
         // 2. OUTPUT: Byte represenatation for visualization
         float maxValue = findMaxValue(outputValues);
@@ -60,7 +60,7 @@ class Interpolate
         double stepZ = Math.Abs(maxZ-minZ)/(resZ-1);
 
         List<float> outputValues = new List<float>();
-        Octree<Point3D> octree = null;
+        Octree<Point3D> octree = null;  // Initialize only for modified method
 
         if (method == Method.modified) {
             octree = constructOctree(points, new Point3D(0.0, 0.0, 0.0), Math.Abs(maxX-minX), octreeBucketSize);
@@ -105,12 +105,12 @@ class Interpolate
 
     public static double getModifiedInterpolatedPointValue(Point3D interpolatedPoint, List<Point3D> inputPoints, Octree<Point3D> octree)
     {
-        List<Point3D> radiusNeighbours = octree.query(interpolatedPoint, r);
+        List<Point3D> radiusNeighbours = octree.queryNeighbours(interpolatedPoint, r);
         if (radiusNeighbours.Count == 0) {
-            double bigger_r = r; // No neighbours in this radius. Find nearest point.
-            while (radiusNeighbours.Count<1) {
+            double bigger_r = r;    // No neighbours in this radius. Find nearest point.
+            while (radiusNeighbours.Count < 1) {
                 bigger_r= bigger_r + bigger_r/4;
-                radiusNeighbours = octree.query(interpolatedPoint, bigger_r);
+                radiusNeighbours = octree.queryNeighbours(interpolatedPoint, bigger_r);
             }
             return radiusNeighbours[0].GetValue();
         }
