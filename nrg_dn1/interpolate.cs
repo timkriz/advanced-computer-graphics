@@ -11,8 +11,8 @@ class Interpolate
     static Method method;
     static float minX, minY, minZ, maxX, maxY, maxZ;
     static int resX, resY, resZ;
-    static int p;                                           // Controls the shape of the interpolant.
-    static double r;                                        // Radius of influence in modified method
+    static double p;                                        // Controls the shape of the interpolant.
+    static double r;                                        // Radius of influence (modified method).
     static int octreeBucketSize;
     
     static void Main(string[] args)
@@ -21,7 +21,7 @@ class Interpolate
 
         method = Method.basic;
         octreeBucketSize = 4;
-        p = 2; 
+        p = 2.0; 
         r = 0.5;
         minX = -1.5f;
         minY = -1.5f;
@@ -170,7 +170,7 @@ class Interpolate
     {
         for (int i = 0; i < args.Length; i++) {
             if(String.Equals(args[i], "--r")) { r = Convert.ToDouble(args[i+1]);};
-            if(String.Equals(args[i], "--p")) { p = Int32.Parse(args[i+1]);};
+            if(String.Equals(args[i], "--p")) { p = double.Parse(args[i+1]);};
             if(String.Equals(args[i], "--min-x")) { minX = float.Parse(args[i+1]);};
             if(String.Equals(args[i], "--min-y")) { minY = float.Parse(args[i+1]);};
             if(String.Equals(args[i], "--min-z")) { minZ = float.Parse(args[i+1]);};
