@@ -10,9 +10,9 @@ csc *.cs
 ```
 Run interpolate.exe with ***basic*** method:
 ```console
-interpolate < input1k.txt --method basic --p 2 --min-x -1.5 --min-y -1.5 --min-z -1  --max-x 1.5 --max-y 1.5 --max-z 1  --res-x 128 --res-y 128 --res-z 64
+./interpolate < input1k.txt --method basic --p 2 --min-x -1.5 --min-y -1.5 --min-z -1  --max-x 1.5 --max-y 1.5 --max-z 1  --res-x 128 --res-y 128 --res-z 64
 ```
 or ***modified*** method:
 ```console
-interpolate < input1k.txt --method modified --r 0.5 --min-x -1.5 --min-y -1.5 --min-z -1  --max-x 1.5 --max-y 1.5 --max-z 1  --res-x 128 --res-y 128 --res-z 64
+./interpolate < input1k.txt --method modified --r 0.5 --min-x -1.5 --min-y -1.5 --min-z -1  --max-x 1.5 --max-y 1.5 --max-z 1  --res-x 128 --res-y 128 --res-z 64
 ```
