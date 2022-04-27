@@ -41,9 +41,13 @@ namespace PathTracer
 
                 // 2. Ray intersects with light
                 if (intersection.Obj is Light) {
-                    L = beta * intersection.Le(wOut);
+                    L = nBounces == 0 ? beta * intersection.Le(wOut) : L; // I1. Path reuse
                     break;
                 }
+                // I1. Path reuse
+                Spectrum Ld = Light.UniformSampleOneLight(intersection, s);
+                L = L.AddTo(beta * Ld);
+
 
                 // 3. Ray intersects with object in the scene but not light
                 Shape shape = intersection.Obj as Shape;
@@ -54,6 +58,17 @@ namespace PathTracer
 
                 Ray wIn = intersection.SpawnRay(wi);
                 r = wIn;
+
+                // I2. Russian roulette
+
+                if (nBounces > 3) {
+                    double q = 1 - beta.Max();
+                    if (ThreadSafeRandom.NextDouble() < q) {
+                        break; // In q cases, stop integration
+                    }
+                    beta = beta / (1 - q); // Correction for q skipped samples
+                }
+
                 nBounces++;
             }
 
