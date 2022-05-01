@@ -16,3 +16,7 @@ or ***modified*** method:
 ```console
 ./interpolate < input1k.txt --method modified --r 0.5 --min-x -1.5 --min-y -1.5 --min-z -1  --max-x 1.5 --max-y 1.5 --max-z 1  --res-x 128 --res-y 128 --res-z 64
 ```
+## 2nd homework: Path tracing
+Physically based rendering path tracing framework with basic path tracing algorithm with  Russian roulette for stopping and importance sampling of choosing ray directions, support for spherical light sources and Oren-Nayar material.
+
+<a href="url"><img src="https://github.com/timkriz/advanced-computer-graphics/blob/master/nrg_dn2/output_images/01_path_tracer.PNG" align="middle" width="300" ></a>
