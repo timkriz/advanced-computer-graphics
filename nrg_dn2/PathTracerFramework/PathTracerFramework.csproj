@@ -70,6 +70,7 @@
       <DependentUpon>MainWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Helpers\Samplers.cs" />
+    <Compile Include="MaterialsLights\OrenNayar.cs" />
     <Compile Include="MaterialsLights\SpecularReflection.cs" />
     <Compile Include="MaterialsLights\Lambertian.cs" />
     <Compile Include="MaterialsLights\BxDF.cs" />

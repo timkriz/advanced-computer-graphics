@@ -21,19 +21,18 @@ namespace PathTracer
             /* Implement */
 
             Spectrum beta = Spectrum.Create(1);
-            int nBounces = 0;
-            int maxNBounces = 10;
+            int numOfBounces = 0;
+            int maxNumOfBounces = 10;
             
 
-            while (nBounces < maxNBounces) {
+            while (numOfBounces < maxNumOfBounces) {
 
                 (double?, SurfaceInteraction) intersectResult = s.Intersect(r);
                 double? distance = intersectResult.Item1;
                 SurfaceInteraction intersection = intersectResult.Item2;
 
                 // 1. Ray does not intersect with scene
-                if (!distance.HasValue)
-                {
+                if (!distance.HasValue) {
                     break;
                 }
 
@@ -41,11 +40,12 @@ namespace PathTracer
 
                 // 2. Ray intersects with light
                 if (intersection.Obj is Light) {
-                    L = nBounces == 0 ? beta * intersection.Le(wOut) : L; // I1. Path reuse
+                    L = numOfBounces == 0 ? beta * intersection.Le(wOut) : L; // I1. Path reuse
                     break;
                 }
                 // I1. Path reuse
                 Spectrum Ld = Light.UniformSampleOneLight(intersection, s);
+
                 L = L.AddTo(beta * Ld);
 
 
@@ -60,8 +60,7 @@ namespace PathTracer
                 r = wIn;
 
                 // I2. Russian roulette
-
-                if (nBounces > 3) {
+                if (numOfBounces > 3) {
                     double q = 1 - beta.Max();
                     if (ThreadSafeRandom.NextDouble() < q) {
                         break; // In q cases, stop integration
@@ -69,7 +68,7 @@ namespace PathTracer
                     beta = beta / (1 - q); // Correction for q skipped samples
                 }
 
-                nBounces++;
+                numOfBounces++;
             }
 
             return L;

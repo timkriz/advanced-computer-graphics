@@ -7,14 +7,16 @@ using System.Threading.Tasks;
 namespace PathTracer
 {
     /// <summary>
-    /// Example BxDF implementation of a perfect lambertian surface
+    /// Example BxDF implementation of a Oren-SNayar surface
     /// </summary>
-    public class Lambertian : BxDF
+    public class OrenNayar : BxDF
     {
         private Spectrum kd;
-        public Lambertian(Spectrum r)
+        private double sigma; // Roughness parameter
+        public OrenNayar(Spectrum r, double sigma)
         {
             kd = r;
+            this.sigma = sigma;
         }
 
         /// <summary>
@@ -27,9 +29,34 @@ namespace PathTracer
         {
             if (!Utils.SameHemisphere(wo, wi))
                 return Spectrum.ZeroSpectrum;
-            //Vector3 vector = wi;
-            //Console.WriteLine("[" + vector.x.ToString() + " " + vector.y.ToString() + " " + vector.z.ToString() + "]");
-            return kd * Utils.PiInv;
+
+            Spectrum lambertianSpectrum = kd * Utils.PiInv;
+            double sigmaPowOfTwo = sigma * sigma;
+
+            double A = 1 - sigmaPowOfTwo / (2 * (sigmaPowOfTwo + 0.33));
+            double B = 0.45 * sigmaPowOfTwo / (sigmaPowOfTwo + 0.09);
+
+            double woTheta = vectorToSphericalTheta(wo); //θ
+            double woPhi = vectorToSphericalPhi(wo); //φ
+            double wiTheta = vectorToSphericalTheta(wi); //θ
+            double wiPhi = vectorToSphericalPhi(wi); //φ
+
+            double alpha = Math.Max(woTheta, wiTheta);
+            double beta = Math.Min(woTheta, wiTheta);
+
+            double factorAfterB = Math.Max(0, Math.Cos(wiPhi - woPhi));
+
+            Spectrum secondPart = Spectrum.Create( A + B * factorAfterB * Math.Sin(alpha) * Math.Tan(beta));
+            return lambertianSpectrum * secondPart;
+        }
+
+        public double vectorToSphericalTheta(Vector3 v)
+        {
+            return Math.Atan(Math.Sqrt(v.x*v.x + v.y*v.y) / v.z);
+        }
+        public double vectorToSphericalPhi(Vector3 v)
+        {
+            return Math.Atan(v.y/v.x);
         }
 
         /// <summary>

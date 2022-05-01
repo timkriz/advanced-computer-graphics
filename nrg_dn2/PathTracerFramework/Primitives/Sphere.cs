@@ -25,22 +25,33 @@ namespace PathTracer
             Ray r = WorldToObject.Apply(ray);
 
             // TODO: Compute quadratic sphere coefficients
-
-            // TODO: Initialize _double_ ray coordinate values
+            double a = Vector3.Dot(r.d, r.d);
+            double b = 2 * Vector3.Dot(r.d, r.o);
+            double c = Vector3.Dot(r.o, r.o) - Radius * Radius;
 
             // TODO: Solve quadratic equation for _t_ values
+            (bool solvable, double t0, double t1) = Utils.Quadratic(a, b, c);
+
+            if (!solvable || t1 <= 0) {
+                return (null, null);
+            }
 
             // TODO: Check quadric shape _t0_ and _t1_ for nearest intersection
+            double t = t0;
+            t = t > 0 ? t : t1;
 
             // TODO: Compute sphere hit position and $\phi$
+            Vector3 point = r.Point(t);
 
             // TODO: Return shape hit and surface interaction
+            Vector3 normal = point.Clone().Normalize();
+            Vector3 wOut = - r.d;
+            Vector3 dpdu = new Vector3(-point.y, point.x, 0);
 
-            // A dummy return example
-            double dummyHit = 0.0;
-            Vector3 dummyVector = new Vector3(0, 0, 0);
-            SurfaceInteraction dummySurfaceInteraction = new SurfaceInteraction(dummyVector, dummyVector, dummyVector, dummyVector, this);
-            return (dummyHit, dummySurfaceInteraction);
+            SurfaceInteraction interection = new SurfaceInteraction(point, normal, wOut, dpdu, this);
+            SurfaceInteraction worldCoordsIntersection = ObjectToWorld.Apply(interection);
+
+            return (t, worldCoordsIntersection);
         }
 
         /// <summary>
@@ -50,14 +61,18 @@ namespace PathTracer
         public override (SurfaceInteraction, double) Sample()
         {
             // TODO: Implement Sphere sampling
+            Vector3 sampledPointOnObject = new Vector3(0, 0, 0) + Radius * Samplers.UniformSampleSphere();
 
             // TODO: Return surface interaction and pdf
+            bool outsideOrientation = true;
+            Vector3 normal = ObjectToWorld.ApplyNormal(sampledPointOnObject);
+            normal = outsideOrientation ? normal : -normal;
 
-            // A dummy return example
-            double dummyPdf = 1.0;
-            Vector3 dummyVector = new Vector3(0, 0, 0);
-            SurfaceInteraction dummySurfaceInteraction = new SurfaceInteraction(dummyVector, dummyVector, dummyVector, dummyVector, this);
-            return (dummySurfaceInteraction, dummyPdf);
+            sampledPointOnObject *= Radius / sampledPointOnObject.Length();
+            Vector3 dpdu = new Vector3(-sampledPointOnObject.y, sampledPointOnObject.x, 0);
+            double pdf = 1 / Area();
+
+            return (ObjectToWorld.Apply(new SurfaceInteraction(sampledPointOnObject, normal, Vector3.ZeroVector, dpdu, this)), pdf);
         }
 
         public override double Area() { return 4 * Math.PI * Radius * Radius; }
